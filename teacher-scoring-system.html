@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识竞技场 - 教师评分系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Noto Sans SC', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .class-tab { padding: 8px 20px; border-radius: 20px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        .class-tab.active { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; box-shadow: 0 4px 15px rgba(255,215,0,0.4); }
+        .class-tab:not(.active) { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); }
+        .leaderboard-container { background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 20px; }
+        .leaderboard-title { text-align: center; font-size: 1.5rem; font-weight: 900; background: linear-gradient(45deg, #FFD700, #FFA500); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+        .leaderboard-item { display: flex; align-items: center; padding: 12px 16px; margin-bottom: 8px; border-radius: 12px; }
+        .rank-1 { background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05)); border: 2px solid #FFD700; }
+        .rank-2 { background: linear-gradient(135deg, rgba(192,192,192,0.2), rgba(192,192,192,0.05)); border: 2px solid #C0C0C0; }
+        .rank-3 { background: linear-gradient(135deg, rgba(205,127,50,0.2), rgba(205,127,50,0.05)); border: 2px solid #CD7F32; }
+        .rank-other { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+        .rank-number { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.2rem; border-radius: 50%; margin-right: 12px; }
+        .rank-1 .rank-number { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; }
+        .rank-2 .rank-number { background: linear-gradient(135deg, #C0C0C0, #808080); color: #000; }
+        .rank-3 .rank-number { background: linear-gradient(135deg, #CD7F32, #8B4513); color: #fff; }
+        .rank-other .rank-number { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+        .student-info { flex: 1; }
+        .student-name { font-weight: 700; color: #fff; }
+        .score-display { text-align: right; }
+        .score-value { font-size: 1.3rem; font-weight: 900; color: #FFD700; }
+        .score-label { font-size: 0.7rem; color: rgba(255,255,255,0.5); }
+        .slot-machine-container { background: linear-gradient(145deg, #0f0f23, #1a1a3e); border-radius: 30px; padding: 40px; box-shadow: 0 0 0 4px rgba(255,215,0,0.3); }
+        .slot-machine-inner { background: linear-gradient(145deg, #1a1a2e, #16213e); border-radius: 20px; padding: 30px; }
+        .slot-display-container { background: #000; border-radius: 20px; padding: 8px; margin-bottom: 30px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); }
+        .slot-display { background: #000; border-radius: 12px; padding: 50px; text-align: center; font-size: 3rem; font-weight: 900; color: #333; border: 3px solid #333; min-height: 140px; display: flex; align-items: center; justify-content: center; }
+        .slot-display.active { color: #0f0; border-color: #0f0; }
+        .slot-display.winner { color: #FFD700; border-color: #FFD700; animation: winner-pulse 0.5s ease-out; }
+        @keyframes winner-pulse { 0% { transform: scale(0.95); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        .spin-btn { flex: 1; background: linear-gradient(135deg, #ff6b6b, #ee5a24); border: none; border-radius: 15px; padding: 20px; font-size: 1.3rem; font-weight: 900; color: white; cursor: pointer; box-shadow: 0 6px 0 #c0392b; }
+        .spin-btn:hover { transform: translateY(-2px); }
+        .spin-btn:disabled { background: #95a5a6; cursor: not-allowed; }
+        .rank-tier { background: linear-gradient(135deg, #1e293b, #0f172a); color: white; border-radius: 12px; padding: 0.3rem 0.8rem; font-weight: bold; font-size: 0.75rem; }
+        .rank-bronze { background: linear-gradient(135deg, #cd7f32, #8b4513); }
+        .rank-silver { background: linear-gradient(135deg, #c0c0c0, #808080); }
+        .rank-gold { background: linear-gradient(135deg, #ffd700, #b8860b); }
+        .rank-platinum { background: linear-gradient(135deg, #e5e4e2, #a0b2c6); color: #333; }
+        .rank-diamond { background: linear-gradient(135deg, #b9f2ff, #00bfff); color: #333; }
+        .rank-master { background: linear-gradient(135deg, #9370db, #4b0082); }
+        .rank-grandmaster { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+        .confetti { position: fixed; width: 12px; height: 12px; animation: confetti-fall 3s linear forwards; z-index: 9999; }
+        @keyframes confetti-fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="p-4">
+    <nav class="glass-panel rounded-2xl p-4 mb-6">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-bold text-2xl">🎓</div>
+                <div>
+                    <h1 class="text-xl font-black text-gray-800">知识竞技场</h1>
+                    <p class="text-xs text-gray-500">教师评分系统</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2" id="class-tabs"></div>
+            <div class="flex gap-3">
+                <button onclick="showSection('manage')" class="px-4 py-2 bg-gray-100 rounded-lg font-medium text-sm">👥 学生管理</button>
+                <button onclick="showSection('game')" class="px-4 py-2 bg-purple-500 text-white rounded-lg font-medium text-sm">🎮 评分</button>
+                <button onclick="showSection('class')" class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium text-sm">🏫 班级</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto">
+        <div id="class-section" class="hidden">
+            <div class="glass-panel rounded-2xl p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">🏫 班级管理</h2>
+                <div class="flex gap-3 mb-6">
+                    <input type="text" id="new-class-name" placeholder="输入班级名称，如：高一(1)班" class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none">
+                    <button onclick="addClass()" class="px-6 py-3 bg-blue-500 text-white font-bold rounded-xl">添加班级</button>
+                </div>
+                <div id="class-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+
+        <div id="manage-section" class="hidden">
+            <div class="glass-panel rounded-2xl p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">👥 学生管理 - <span id="current-class-name" class="text-purple-600">请选择班级</span></h2>
+                    <span class="text-sm text-gray-500" id="student-count">0 名学生</span>
+                </div>
+                <div class="flex gap-3 mb-6">
+                    <input type="text" id="new-student-name" placeholder="输入学生姓名" class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none">
+                    <button onclick="addStudent()" class="px-6 py-3 bg-purple-500 text-white font-bold rounded-xl">添加</button>
+                    <button onclick="addDemoStudents()" class="px-4 py-3 bg-gray-200 rounded-xl">示例</button>
+                </div>
+                <div class="mb-6 p-4 bg-blue-50 rounded-xl">
+                    <h4 class="font-bold text-blue-800 mb-2">📥 批量导入</h4>
+                    <textarea id="bulk-import" placeholder="每行一个姓名" class="w-full px-4 py-2 border rounded mb-2 h-20"></textarea>
+                    <button onclick="bulkImport()" class="px-4 py-2 bg-blue-500 text-white rounded">导入</button>
+                </div>
+                <div class="mb-6 p-4 bg-purple-50 rounded-xl">
+                    <h4 class="font-bold text-purple-800 mb-2">💾 数据备份</h4>
+                    <div class="flex gap-3">
+                        <button onclick="exportData()" class="px-4 py-2 bg-green-500 text-white rounded text-sm">📤 导出</button>
+                        <label class="px-4 py-2 bg-orange-500 text-white rounded text-sm cursor-pointer">📥 导入<input type="file" accept=".json" onchange="importData(this)" class="hidden"></label>
+                    </div>
+                </div>
+                <div id="student-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div class="mt-6 flex gap-3">
+                    <button onclick="clearAllStudents()" class="px-4 py-2 text-red-600 border border-red-200 rounded text-sm">清空学生</button>
+                    <button onclick="resetAllScores()" class="px-4 py-2 text-orange-600 border border-orange-200 rounded text-sm">重置分数</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-section">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="slot-machine-container">
+                        <div class="slot-machine-inner">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-white font-bold text-lg">🎰 RANDOM PICKER</h3>
+                                <span class="text-gray-400 text-sm" id="remaining-count">REMAINING: 00</span>
+                            </div>
+                            <div class="slot-display-container">
+                                <div id="slot-display" class="slot-display"><span class="opacity-50">CLICK TO SPIN</span></div>
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="spinSlot()" id="spin-btn" class="spin-btn">🎲 SPIN NOW</button>
+                                <button onclick="resetPool()" class="px-4 py-3 bg-gray-600 text-white rounded-xl text-2xl">🔄</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-gray-800">⚡ 评分控制</h3>
+                            <div id="current-student-display" class="text-lg font-medium text-purple-600">请先抽取学生</div>
+                        </div>
+                        <div class="mb-4 p-4 bg-gray-50 rounded-xl">
+                            <div class="flex gap-3">
+                                <input type="number" id="custom-score" placeholder="自定义分数" class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl outline-none">
+                                <button onclick="addCustomScore()" class="px-6 py-3 bg-blue-500 text-white font-bold rounded-xl">确认</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 gap-3 mb-4">
+                            <button onclick="addScore(-10)" class="py-3 bg-red-100 text-red-700 rounded-xl font-bold">-10</button>
+                            <button onclick="addScore(-5)" class="py-3 bg-red-50 text-red-600 rounded-xl font-bold">-5</button>
+                            <button onclick="addScore(5)" class="py-3 bg-green-50 text-green-600 rounded-xl font-bold">+5</button>
+                            <button onclick="addScore(10)" class="py-3 bg-green-100 text-green-700 rounded-xl font-bold">+10</button>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <button onclick="addScore(15)" class="py-3 bg-green-400 text-white rounded-xl font-bold">+15</button>
+                            <button onclick="addScore(20)" class="py-3 bg-purple-400 text-white rounded-xl font-bold">+20</button>
+                            <button onclick="addScore(-20)" class="py-3 bg-red-400 text-white rounded-xl font-bold">-20</button>
+                        </div>
+                    </div>
+                    <div id="student-detail" class="glass-panel rounded-2xl p-6 hidden">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">📊 学生详情</h3>
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-16 h-16 bg-purple-400 rounded-full flex items-center justify-center text-white text-2xl font-bold" id="detail-avatar">👤</div>
+                            <div>
+                                <div class="text-2xl font-bold" id="detail-name">--</div>
+                                <div class="rank-tier" id="detail-rank">青铜</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div class="bg-gray-50 rounded-lg p-3"><div class="text-2xl font-bold text-purple-600" id="detail-score">0</div><div class="text-xs text-gray-500">积分</div></div>
+                            <div class="bg-gray-50 rounded-lg p-3"><div class="text-2xl font-bold text-blue-600" id="detail-answered">0</div><div class="text-xs text-gray-500">答题</div></div>
+                            <div class="bg-gray-50 rounded-lg p-3"><div class="text-2xl font-bold text-orange-600" id="detail-streak">0</div><div class="text-xs text-gray-500">连胜</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="leaderboard-container">
+                        <h3 class="leaderboard-title">🏆 LEADERBOARD</h3>
+                        <div id="leaderboard" class="space-y-2"></div>
+                    </div>
+                    <div class="glass-panel rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">📝 历史</h3>
+                        <div id="history-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="max-w-7xl mx-auto mt-6 mb-8">
+        <div class="glass-panel rounded-xl p-6">
+            <h3 class="font-bold text-gray-800 mb-4">🏅 段位</h3>
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-2 text-center text-xs">
+                <div class="p-2 rounded-lg bg-orange-700 text-white"><div class="font-bold">青铜</div><div>0-99</div></div>
+                <div class="p-2 rounded-lg bg-gray-500 text-white"><div class="font-bold">白银</div><div>100-299</div></div>
+                <div class="p-2 rounded-lg bg-yellow-500 text-white"><div class="font-bold">黄金</div><div>300-599</div></div>
+                <div class="p-2 rounded-lg bg-gray-300 text-gray-800"><div class="font-bold">铂金</div><div>600-999</div></div>
+                <div class="p-2 rounded-lg bg-cyan-400 text-gray-800"><div class="font-bold">钻石</div><div>1000-1499</div></div>
+                <div class="p-2 rounded-lg bg-purple-600 text-white"><div class="font-bold">大师</div><div>1500-1999</div></div>
+                <div class="p-2 rounded-lg bg-red-500 text-white"><div class="font-bold">宗师</div><div>2000+</div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = JSON.parse(localStorage.getItem('arena_data')) || { classes: {}, currentClassId: null };
+        let currentStudent = null;
+        let availableStudents = [];
+        
+        const ranks = [
+            { name: '青铜', min: 0, class: 'rank-bronze' },
+            { name: '白银', min: 100, class: 'rank-silver' },
+            { name: '黄金', min: 300, class: 'rank-gold' },
+            { name: '铂金', min: 600, class: 'rank-platinum' },
+            { name: '钻石', min: 1000, class: 'rank-diamond' },
+            { name: '大师', min: 1500, class: 'rank-master' },
+            { name: '宗师', min: 2000, class: 'rank-grandmaster' }
+        ];
+
+        function getRank(score) {
+            for (let i = ranks.length - 1; i >= 0; i--) {
+                if (score >= ranks[i].min) return ranks[i];
+            }
+            return ranks[0];
+        }
+
+        function saveData() {
+            localStorage.setItem('arena_data', JSON.stringify(data));
+        }
+
+        function getCurrentClass() {
+            if (!data.currentClassId || !data.classes[data.currentClassId]) {
+                const classIds = Object.keys(data.classes);
+                if (classIds.length > 0) data.currentClassId = classIds[0];
+            }
+            return data.currentClassId ? data.classes[data.currentClassId] : null;
+        }
+
+        function getCurrentStudents() {
+            const cls = getCurrentClass();
+            return cls ? cls.students : [];
+        }
+
+        function addClass() {
+            const input = document.getElementById('new-class-name');
+            const name = input.value.trim();
+            if (!name) return alert('请输入班级名称');
+            const id = 'class_' + Date.now();
+            data.classes[id] = { id, name, students: [], history: [] };
+            if (!data.currentClassId) data.currentClassId = id;
+            input.value = '';
+            saveData();
+            renderClassTabs();
+            renderClassList();
+        }
+
+        function deleteClass(id) {
+            if (!confirm('确定删除该班级？')) return;
+            delete data.classes[id];
+            if (data.currentClassId === id) data.currentClassId = Object.keys(data.classes)[0] || null;
+            saveData();
+            renderClassTabs();
+            renderClassList();
+            renderStudentList();
+        }
+
+        function switchClass(id) {
+            data.currentClassId = id;
+            currentStudent = null;
+            availableStudents = [];
+            saveData();
+            renderClassTabs();
+            renderStudentList();
+            updateLeaderboard();
+            updateRemainingCount();
+            document.getElementById('current-student-display').textContent = '请先抽取学生';
+            document.getElementById('student-detail').classList.add('hidden');
+        }
+
+        function renderClassTabs() {
+            const container = document.getElementById('class-tabs');
+            const classIds = Object.keys(data.classes);
+            if (classIds.length === 0) {
+                container.innerHTML = '<span class="text-gray-500 text-sm">暂无班级</span>';
+                return;
+            }
+            container.innerHTML = classIds.map(id => 
+                `<div class="class-tab ${data.currentClassId === id ? 'active' : ''}" onclick="switchClass('${id}')">${data.classes[id].name}</div>`
+            ).join('');
+            const cls = getCurrentClass();
+            document.getElementById('current-class-name').textContent = cls ? cls.name : '请选择班级';
+        }
+
+        function renderClassList() {
+            const container = document.getElementById('class-list');
+            const classIds = Object.keys(data.classes);
+            if (classIds.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">暂无班级</div>';
+                return;
+            }
+            container.innerHTML = classIds.map(id => {
+                const cls = data.classes[id];
+                return `<div class="glass-panel rounded-xl p-4 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-400 rounded-xl flex items-center justify-center text-white text-xl">🏫</div>
+                        <div><div class="font-bold">${cls.name}</div><div class="text-xs text-gray-500">${cls.students.length} 名学生</div></div>
+                    </div>
+                    <button onclick="deleteClass('${id}')" class="text-red-500 p-2">✕</button>
+                </div>`;
+            }).join('');
+        }
+
+        function addStudent() {
+            const cls = getCurrentClass();
+            if (!cls) return alert('请先创建班级');
+            const input = document.getElementById('new-student-name');
+            const name = input.value.trim();
+            if (!name) return alert('请输入姓名');
+            if (cls.students.find(s => s.name === name)) return alert('学生已存在');
+            cls.students.push({ id: Date.now(), name, score: 0, answered: 0, streak: 0, maxStreak: 0 });
+            input.value = '';
+            saveData();
+            renderStudentList();
+            updateLeaderboard();
+            updateRemainingCount();
+        }
+
+        function bulkImport() {
+            const cls = getCurrentClass();
+            if (!cls) return alert('请先创建班级');
+            const textarea = document.getElementById('bulk-import');
+            const names = textarea.value.split('\n').map(n => n.trim()).filter(n => n);
+            if (!names.length) return alert('请输入名单');
+            let added = 0, dup = 0;
+            names.forEach(name => {
+                if (!cls.students.find(s => s.name === name)) {
+                    cls.students.push({ id: Date.now() + Math.random(), name, score: 0, answered: 0, streak: 0, maxStreak: 0 });
+                    added++;
+                } else dup++;
+            });
+            saveData();
+            renderStudentList();
+            updateLeaderboard();
+            textarea.value = '';
+            alert(`新增 ${added} 人，跳过 ${dup} 人`);
+        }
+
+        function addDemoStudents() {
+            const cls = getCurrentClass();
+            if (!cls) return alert('请先创建班级');
+            const demos = ['张三', '李四', '王五', '赵六', '钱七', '孙八', '周九', '吴十'];
+            demos.forEach(name => {
+                if (!cls.students.find(s => s.name === name)) {
+                    cls.students.push({ id: Date.now() + Math.random(), name, score: Math.floor(Math.random() * 200), answered: Math.floor(Math.random() * 10), streak: 0, maxStreak: 0 });
+                }
+            });
+            saveData();
+            renderStudentList();
+            updateLeaderboard();
+        }
+
+        function deleteStudent(id) {
+            const cls = getCurrentClass();
+            if (!cls || !confirm('确定删除？')) return;
+            cls.students = cls.students.filter(s => s.id !== id);
+            saveData();
+            renderStudentList();
+            updateLeaderboard();
+        }
+
+        function clearAllStudents() {
+            const cls = getCurrentClass();
+            if (!cls || !confirm('清空所有学生？')) return;
+            cls.students = [];
+            cls.history = [];
+            currentStudent = null;
+            saveData();
+            renderStudentList();
+            updateLeaderboard();
+        }
+
+        function resetAllScores() {
+            const cls = getCurrentClass();
+            if (!cls || !confirm('重置所有分数？')) return;
+            cls.students.forEach(s => { s.score = 0; s.answered = 0; s.streak = 0; s.maxStreak = 0; });
+            cls.history = [];
+            saveData();
+            renderStudentList();
+            updateLeaderboard();
+        }
+
+        function renderStudentList() {
+            const cls = getCurrentClass();
+            const container = document.getElementById('student-list');
+            const students = cls ? cls.students : [];
+            document.getElementById('student-count').textContent = `${students.length} 名学生`;
+            if (!students.length) {
+                container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">暂无学生</div>';
+                return;
+            }
+            container.innerHTML = students.map(s => {
+                const rank = getRank(s.score);
+                return `<div class="glass-panel rounded-xl p-4 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-purple-400 rounded-full flex items-center justify-center text-white font-bold">${s.name.charAt(0)}</div>
+                        <div><div class="font-bold">${s.name}</div><div class="rank-tier ${rank.class}">${rank.name}</div></div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right"><div class="font-bold text-purple-600">${s.score}分</div><div class="text-xs text-gray-500">${s.answered}次</div></div>
+                        <button onclick="deleteStudent(${s.id})" class="text-red-500 p-2">✕</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function spinSlot() {
+            const students = getCurrentStudents();
+            if (!students.length) return alert('请先添加学生');
+            if (availableStudents.length === 0) availableStudents = [...students];
+            if (!availableStudents.length) {
+                if (confirm('已抽完，是否重置？')) resetPool();
+                return;
+            }
+            const display = document.getElementById('slot-display');
+            const btn = document.getElementById('spin-btn');
+            btn.disabled = true;
+            display.classList.add('active');
+            let spins = 0;
+            const interval = setInterval(() => {
+                display.textContent = availableStudents[Math.floor(Math.random() * availableStudents.length)].name;
+                spins++;
+                if (spins >= 20) {
+                    clearInterval(interval);
+                    finalizeSpin();
+                }
+            }, 100);
+        }
+
+        function finalizeSpin() {
+            const display = document.getElementById('slot-display');
+            const btn = document.getElementById('spin-btn');
+            const index = Math.floor(Math.random() * availableStudents.length);
+            currentStudent = availableStudents[index];
+            availableStudents.splice(index, 1);
+            display.classList.remove('active');
+            display.classList.add('winner');
+            display.textContent = currentStudent.name;
+            btn.disabled = false;
+            document.getElementById('current-student-display').innerHTML = `当前: <span class="text-2xl font-bold text-purple-600">${currentStudent.name}</span>`;
+            document.getElementById('student-detail').classList.remove('hidden');
+            updateStudentDetail();
+            updateRemainingCount();
+            createConfetti(20);
+            setTimeout(() => display.classList.remove('winner'), 3000);
+        }
+
+        function resetPool() {
+            availableStudents = [...getCurrentStudents()];
+            updateRemainingCount();
+            const display = document.getElementById('slot-display');
+            display.textContent = 'CLICK TO SPIN';
+        }
+
+        function updateRemainingCount() {
+            document.getElementById('remaining-count').textContent = `REMAINING: ${(availableStudents.length || 0).toString().padStart(2, '0')}`;
+        }
+
+        function addScore(points) {
+            if (!currentStudent) return alert('请先抽取学生');
+            const cls = getCurrentClass();
+            const student = cls.students.find(s => s.id === currentStudent.id);
+            if (!student) return;
+            student.score += points;
+            student.answered++;
+            if (points > 0) { student.streak++; student.maxStreak = Math.max(student.maxStreak, student.streak); }
+            else { student.streak = 0; }
+            cls.history.unshift({ time: new Date().toLocaleTimeString(), name: student.name, points, total: student.score });
+            if (cls.history.length > 50) cls.history.pop();
+            saveData();
+            updateStudentDetail();
+            updateLeaderboard();
+            renderHistory();
+            renderStudentList();
+        }
+
+        function addCustomScore() {
+            const input = document.getElementById('custom-score');
+            const points = parseInt(input.value);
+            if (isNaN(points)) return alert('请输入有效数字');
+            addScore(points);
+            input.value = '';
+        }
+
+        function updateStudentDetail() {
+            if (!currentStudent) return;
+            const cls = getCurrentClass();
+            const student = cls.students.find(s => s.id === currentStudent.id);
+            if (!student) return;
+            currentStudent = student;
+            const rank = getRank(student.score);
+            document.getElementById('detail-avatar').textContent = student.name.charAt(0);
+            document.getElementById('detail-name').textContent = student.name;
+            document.getElementById('detail-rank').textContent = rank.name;
+            document.getElementById('detail-rank').className = `rank-tier ${rank.class}`;
+            document.getElementById('detail-score').textContent = student.score;
+            document.getElementById('detail-answered').textContent = student.answered;
+            document.getElementById('detail-streak').textContent = student.streak;
+        }
+
+        function updateLeaderboard() {
+            const container = document.getElementById('leaderboard');
+            const students = getCurrentStudents();
+            if (!students.length) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-4">暂无数据</div>';
+                return;
+            }
+            const sorted = [...students].sort((a, b) => b.score - a.score);
+            container.innerHTML = sorted.slice(0, 10).map((s, i) => {
+                const rank = getRank(s.score);
+                const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+                return `<div class="leaderboard-item ${cls}">
+                    <div class="rank-number">${i + 1}</div>
+                    <div class="student-info">
+                        <div class="student-name">${s.name}</div>
+                        <span class="rank-tier ${rank.class}">${rank.name}</span>
+                    </div>
+                    <div class="score-display">
+                        <div class="score-value">${s.score}</div>
+                        <div class="score-label">POINTS</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderHistory() {
+            const cls = getCurrentClass();
+            const container = document.getElementById('history-list');
+            const history = cls ? cls.history : [];
+            if (!history.length) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-4">暂无记录</div>';
+                return;
+            }
+            container.innerHTML = history.slice(0, 20).map(h => `
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm">
+                    <div><span class="text-gray-400 text-xs">${h.time}</span><div class="font-medium">${h.name}</div></div>
+                    <div class="font-bold ${h.points > 0 ? 'text-green-600' : 'text-red-600'}">${h.points > 0 ? '+' : ''}${h.points}</div>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            const cls = getCurrentClass();
+            if (!cls) return;
+            cls.history = [];
+            saveData();
+            renderHistory();
+        }
+
+        function exportData() {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `知识竞技场_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (confirm('导入将覆盖当前数据，确定继续？')) {
+                        data = imported;
+                        saveData();
+                        renderClassTabs();
+                        renderClassList();
+                        renderStudentList();
+                        updateLeaderboard();
+                        alert('导入成功！');
+                    }
+                } catch(err) {
+                    alert('导入失败：文件格式错误');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showSection(section) {
+            document.getElementById('class-section').classList.add('hidden');
+            document.getElementById('manage-section').classList.add('hidden');
+            document.getElementById('game-section').classList.add('hidden');
+            document.getElementById(section + '-section').classList.remove('hidden');
+            if (section === 'manage') renderStudentList();
+            else if (section === 'class') renderClassList();
+            else updateLeaderboard();
+        }
+
+        function createConfetti(count) {
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b'];
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const c = document.createElement('div');
+                    c.className = 'confetti';
+                    c.style.left = Math.random() * 100 + 'vw';
+                    c.style.top = '-10px';
+                    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    c.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    document.body.appendChild(c);
+                    setTimeout(() => c.remove(), 4000);
+                }, i * 30);
+            }
+        }
+
+        // 初始化
+        renderClassTabs();
+        renderClassList();
+        updateLeaderboard();
+        updateRemainingCount();
+        renderHistory();
+    </script>
+</body>
+</html>
